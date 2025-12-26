@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Movie Recommender</title>
+    <style>
+        :root {
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: #0f172a;
+            background: linear-gradient(135deg, #f8fafc, #dbeafe);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            width: min(900px, 92vw);
+            background: #fff;
+            border-radius: 18px;
+            padding: 32px;
+            box-shadow: 0 25px 60px -25px rgba(15, 23, 42, 0.35);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 2rem;
+            color: #0f172a;
+        }
+
+        p {
+            margin: 0 0 20px;
+            color: #475569;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 16px;
+            font-size: 16px;
+            border: 1px solid #cbd5f5;
+            border-radius: 12px;
+            resize: vertical;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        textarea:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        button {
+            border: none;
+            padding: 12px 28px;
+            border-radius: 999px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        #result {
+            margin-top: 24px;
+            padding: 20px;
+            border-radius: 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            min-height: 60px;
+            line-height: 1.6;
+        }
+
+        #history {
+            margin-top: 32px;
+        }
+
+        #history h2 {
+            margin: 0 0 16px;
+            font-size: 1.25rem;
+        }
+
+        .history-entry {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            background: #fff;
+        }
+
+        .history-entry time {
+            display: inline-block;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+
+        .history-entry strong {
+            display: block;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Movie Recommender</h1>
+        <p>Describe movies you love (e.g. “I liked ‘The Shawshank Redemption’ and ‘Forrest Gump’”) and get tailored suggestions.</p>
+        <textarea id="userInput" placeholder="Type your favorites or mood..."></textarea>
+        <div class="actions">
+            <button onclick="getRecommendation()">Get Recommendation</button>
+            <span id="status" style="color:#94a3b8;font-size:14px;"></span>
+        </div>
+        <div id="result"></div>
+        <section id="history">
+            <h2>Conversation History</h2>
+            <div id="historyList"></div>
+        </section>
+    </div>
+
+    <script>
+        const API_URL = "https://u816842-a3d2-b2f8b041.bjb2.seetacloud.com:8443/recommend";
+        const history = [];
+        const PROMPT_PREFIX = "Please recommend movies based on the following preferences. Do not show chain-of-thought; provide recommendations and reasons directly in English. User input: ";
+
+        function renderHistory() {
+            const list = document.getElementById("historyList");
+            if (!history.length) {
+                list.innerHTML = "<p style='color:#94a3b8;'>No conversations yet.</p>";
+                return;
+            }
+
+            list.innerHTML = history.map(item => `
+                <article class="history-entry">
+                    <time>${item.time}</time>
+                    <strong>You</strong>
+                    <p>${item.input}</p>
+                    <strong>Assistant</strong>
+                    <p>${item.output}</p>
+                </article>
+            `).join("");
+        }
+
+        async function getRecommendation() {
+            const userInput = document.getElementById("userInput").value.trim();
+            const resultDiv = document.getElementById("result");
+            const status = document.getElementById("status");
+
+            if (!userInput) {
+                resultDiv.innerHTML = "Please tell me at least one movie you like.";
+                return;
+            }
+
+            const finalInput = `${PROMPT_PREFIX}${userInput}`;
+
+            try {
+                status.textContent = "Generating...";
+                resultDiv.innerHTML = "";
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        user_input: finalInput,
+                        max_length: 500,
+                        temperature: 0.6
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === "success") {
+                    const promptWithInput = `${PROMPT_PREFIX}${userInput}`;
+                    const cleanedRecommendation = data.recommendation
+                        ? data.recommendation.replace(promptWithInput, "").trim()
+                        : "";
+                    let finalRecommendation = cleanedRecommendation || data.recommendation || "No recommendation provided.";
+                    const recommendationIndex = finalRecommendation.toLowerCase().indexOf("recommendation");
+                    if (recommendationIndex > -1) {
+                        finalRecommendation = finalRecommendation.slice(recommendationIndex).trim();
+                    } else {
+                        finalRecommendation = finalRecommendation.trim();
+                    }
+
+                    resultDiv.innerHTML = `<strong>Recommendation</strong><br>${finalRecommendation}`;
+                    history.unshift({
+                        time: new Date().toLocaleString(),
+                        input: userInput,
+                        output: finalRecommendation
+                    });
+                } else {
+                    resultDiv.innerHTML = `Error: ${data.message}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `Request failed: ${error.message}`;
+            } finally {
+                status.textContent = "";
+                renderHistory();
+            }
+        }
+
+        renderHistory();
+    </script>
+</body>
+</html>
