@@ -1,0 +1,56 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+*.venv/
+ENV/
+
+# Large model and embedding files (do not upload)
+*.pth
+*.pt
+lightgcn_embeddings.pt
+best_lightgcn_model.pth
+
+# Data files — keep README but ignore actual data files
+data/*.csv
+data/*.xlsx
+data/*.zip
+data/*.rar
+!data/README.md
+
+# IDE / editor settings
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Environment variables / credentials
+.env
+*.env
+
+# Python packaging artifacts
+build/
+dist/
+pip-wheel-metadata/
+.pytest_cache/
+
+# Jupyter checkpoints
+.ipynb_checkpoints
+
+# OS generated files
+desktop.ini
+
+
